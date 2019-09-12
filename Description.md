@@ -49,6 +49,7 @@ Code (75 points):
 * 25 points for correctly implementing smoothing, backoff, and interpolation for trigram models
 * 10 points for correctly implementing evaluation via perplexity
 * 15 points for improving your results with an advanced method
+
 Report (25 points):
 * 20 points for your program description and critical analysis
 * 5 points for presenting the requested supporting data
