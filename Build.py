@@ -1,4 +1,5 @@
 from collections import defaultdict
+import os
 import pickle
 import re
 
@@ -26,6 +27,10 @@ def prep(txt):
 
 
 def print_nested_dict(d):
+    """
+    :param d: The nested defaultdict to be printed
+    :return: None
+    """
     for item, keys in d.items():
         print(item + ': ', end='')
         print(dict(keys))
@@ -33,89 +38,85 @@ def print_nested_dict(d):
 
 
 if __name__ == '__main__':
-    ###############
-    # German
-    ###############
-    # Preprocess
-    training_de = open('data/training.de', 'r')
-    text_de = ' '.join(training_de.readlines())
-    training_de.close()
-    text_de_tokenized = prep(text_de)
 
-    # # Unigram
-    # uni_de_count = defaultdict(lambda: 0)
-    # uni_de = defaultdict(lambda: 0.0)
-    # total_de = 0
-    # for item in text_de_tokenized:
-    #     for c in item:
-    #         uni_de_count[c] += 1
-    #         total_de += 1
-    # for token, count in uni_de_count.items():
-    #     uni_de[token] = float(count / total_de)
-    # # pickle.dump(dict(uni_de), open('models/uni_de.pkl', 'wb'))
+    out_path = 'models/es/'
+    if not os.path.exists(out_path):
+        os.makedirs(out_path)
+
+    # Preprocess
+    training = open('data/training.es', 'r')
+    text = ' '.join(training.readlines())
+    training.close()
+    text_tokenized = prep(text)
+
+    # Unigram
+    uni_count = defaultdict(lambda: 0)
+    uni = defaultdict(lambda: 0.0)
+    total_de = 0
+    for item in text_tokenized:
+        for c in item:
+            uni_count[c] += 1
+            total_de += 1
+
+    for token, count in uni_count.items():
+        uni[token] = float(count / total_de)
+
+    pickle.dump(dict(uni), open(out_path + 'unigram.pkl', 'wb'))
 
     # Bigram
-    de_total_count = defaultdict(lambda: 0)
-    bi_de_count = defaultdict(lambda: defaultdict(lambda: 0))
-    bi_de = defaultdict(lambda: defaultdict(lambda: 0.0))
-    for token in text_de_tokenized:
-        de_total_count['<s>'] += 1
-        de_total_count['</s>'] += 1
-        for i in range(len(token)):
-            c = token[i]
-            c_prev = token[i-1] if i > 0 else '<s>'
-            bi_de_count[c][c_prev] += 1
-            de_total_count[c] += 1
-        last_char = token[len(token)-1]
-        bi_de_count['</s>'][last_char] += 1
-    for c, bi_dict in bi_de_count.items():
-        for c_prev, bi_count in bi_dict.items():
-            prob = float(bi_count / de_total_count[c_prev])
-            bi_de[c][c_prev] = prob
-    bi_de['<s>']['</s>'] = 1.0
-    for key, value in bi_de.items():
-        bi_de[key] = dict(value)
-    print_nested_dict(bi_de)
-    pickle.dump(dict(bi_de), open('models/bi.de.pkl', 'wb'))
+    bi_count_1 = defaultdict(lambda: 0)  # C(w_{i-1})
+    bi_count_2 = defaultdict(lambda: 0)  # C(w_{i-1}, w_i)
+    bi = defaultdict(lambda: defaultdict(lambda: 0.0))  # The model
 
-    ###############
-    # English
-    ###############
-    # training_en = open('data/training.en', 'r')
-    # text_en = ' '.join(training_en.readlines())
-    # training_en.close()
-    # text_en_tokenized = prep(text_en)
-    #
-    # uni_en = defaultdict(lambda: 0.0)
-    # total_en = 0
-    # for item in text_en_tokenized:
-    #     for c in item:
-    #         uni_en[c] += 1
-    #         total_en += 1
-    # for token, count in uni_en.items():
-    #     uni_en[token] = float(count / total_en)
-    # # pickle.dump(dict(uni_en), open('models/uni_en.pkl', 'wb'))
+    for token in text_tokenized:  # Build dict count
+        n = len(token)
 
-    ###############
-    # Spanish
-    ###############
-    # training_es = open('data/training.es', 'r')
-    # text_es = ' '.join(training_es.readlines())
-    # training_es.close()
-    # text_es_tokenized = prep(text_es)
-    #
-    # uni_es = defaultdict(lambda: 0.0)
-    # total_es = 0
-    # for item in text_es_tokenized:
-    #     for c in item:
-    #         uni_es[c] += 1
-    #         total_es += 1
-    # for token, count in uni_es.items():
-    #     uni_es[token] = float(count / total_es)
-    # # pickle.dump(dict(uni_es), open('models/uni_es.pkl', 'wb'))
+        for i in range(n+1):
+            c = token[i] if i < n else '</s>'
+            c_prev = token[i - 1] if i > 0 else '<s>'
+            bi_count_1[c_prev] += 1
+            bi_count_2[(c_prev, c)] += 1
 
-    #########################
-    # Bigram Model
-    #########################
-    # German
+    for token in text_tokenized:  # Build model
+        n = len(token)
 
+        for i in range(n + 1):
+            c = token[i] if i < n else '</s>'
+            c_prev = token[i - 1] if i > 0 else '<s>'
+            bi[c][c_prev] = float(bi_count_2[(c_prev, c)] / bi_count_1[c_prev])
+
+    # print(bi_count_2)
+    for key, value in bi.items():  # Format transfer
+        bi[key] = dict(value)
+
+    pickle.dump(dict(bi), open(out_path + 'bigram.pkl', 'wb'))
+
+    # Trigram (no smoothing)
+    tri_count_3 = defaultdict(lambda: 0)  # C(w_{i-2}, w_{i-1}, w_i)
+    tri_count_2 = defaultdict(lambda: 0)  # C(w_{i-2}, w_{i-1})
+    tri_no_smoothing = defaultdict(lambda: defaultdict(lambda: 0.0))  # The model
+
+    for token in text_tokenized:  # Build dict count
+        n = len(token)
+        for i in range(1, n+1):
+            c = token[i] if i < n else '</s>'
+            prev_2 = token[i-2] if i >= 2 else '<s>'
+            prev_1 = token[i-1]
+
+            tri_count_2[(prev_2, prev_1)] += 1
+            tri_count_3[(prev_2, prev_1, c)] += 1
+
+    for token in text_tokenized:  # Build model
+        n = len(token)
+        for i in range(1, n+1):
+            c = token[i] if i < n else '</s>'
+            prev_2 = token[i-2] if i >= 2 else '<s>'
+            prev_1 = token[i-1]
+            tri_no_smoothing[c][(prev_2, prev_1)] = float(
+                tri_count_3[(prev_2, prev_1, c)] / tri_count_2[(prev_2, prev_1)]
+            )
+
+    for key, value in tri_no_smoothing.items():  # Format transfer
+        tri_no_smoothing[key] = dict(value)
+
+    pickle.dump(dict(tri_no_smoothing), open(out_path + 'trigram_no_smoothing.pkl', 'wb'))
