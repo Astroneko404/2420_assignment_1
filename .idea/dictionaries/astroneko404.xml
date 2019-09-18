@@ -1,7 +1,10 @@
 <component name="ProjectDictionaryState">
   <dictionary name="astroneko404">
     <words>
+      <w>backoff</w>
+      <w>bigram</w>
       <w>tokenization</w>
+      <w>unigram</w>
     </words>
   </dictionary>
 </component>
