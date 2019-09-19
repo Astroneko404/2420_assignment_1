@@ -14,7 +14,7 @@ def prep(txt):
     :return: List of tokens that is preprocessed
     """
     # Tokenization
-    txt_split = re.split('\u00ad| |\n|\t|,|\.|!|\\?|;|:|-|–|—|~|%|_|\\|/|/|º|¿|¡|<|>|\^|\(|\)|\[|\]|\\|\'|`|"', txt)
+    txt_split = re.split('\u00ad| |\n|\t|,|\.|!|\\?|;|:|-|–|—|~|%|_|\\|/|/|º|¿|¡|<|>|\^|\(|\)|\[|\]|\\|\'|\'|`|"', txt)
     txt_tokenized = [x for x in txt_split if x and not has_num(x)]
 
     # Lowercase
