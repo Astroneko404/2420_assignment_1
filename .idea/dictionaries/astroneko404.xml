@@ -3,6 +3,8 @@
     <words>
       <w>backoff</w>
       <w>bigram</w>
+      <w>denom</w>
+      <w>katz</w>
       <w>tokenization</w>
       <w>unigram</w>
     </words>
