@@ -189,9 +189,9 @@ if __name__ == '__main__':
     # print(perplexity_bigram)
     # print()
 
-    # print('Trigram (no smoothing) result:')
-    # print(perplexity_trigram_no_smoothing)
-    # print()
+    print('Trigram (no smoothing) result:')
+    print(perplexity_trigram_no_smoothing)
+    print()
     #
     # print('Trigram (Laplace) result:')
     # print(perplexity_trigram_laplace)
@@ -205,7 +205,6 @@ if __name__ == '__main__':
     print(perplexity_trigram_katz_backoff)
     print()
 
-    #
-    # print('Trigram (Linear Interpolation) result:')
-    # print(perplexity_trigram_interpolation)
-    # print()
+    print('Trigram (Linear Interpolation) result:')
+    print(perplexity_trigram_interpolation)
+    print()

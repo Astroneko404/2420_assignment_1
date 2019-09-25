@@ -79,8 +79,10 @@ def print_nested_dict(d):
     """
     for item, keys in d.items():
         print(item, end='')
-        print(': ', end='')
-        print(dict(keys))
+        print(': ')
+        for subitem, prob in keys.items():
+            print(subitem, prob)
+        print()
     return
 
 
@@ -141,52 +143,62 @@ if __name__ == '__main__':
     for key, value in tri_no_smoothing.items():  # Format transfer
         tri_no_smoothing[key] = dict(value)
 
+    # print_nested_dict(tri_no_smoothing)
+
     # pickle.dump(dict(tri_no_smoothing), open(out_path + 'trigram_no_smoothing.pkl', 'wb'))
 
     ########################
     # Trigram (Laplace)
     ########################
-    # unigram = pickle.load(open(out_path + 'unigram.pkl', 'rb'))
-    # v = len(unigram)
-    # tri_laplace = defaultdict(lambda: defaultdict(lambda: 0.0))  # The model
-    #
-    # for context, context_count in tri_count_2.items():  # Build model using dictionaries of count from previous part
-    #     for c, _ in unigram.items():
-    #         full = (context[0], context[1], c)
-    #         total_count = tri_count_3[full] + 1
-    #         new_denominator = context_count + v
-    #         tri_laplace[c][context] = float(total_count / new_denominator)
-    #
-    # for key, value in tri_laplace.items():
-    #     tri_laplace[key] = dict(value)
-    #
+    unigram = pickle.load(open(out_path + 'unigram.pkl', 'rb'))
+    v = len(unigram)
+    tri_laplace = defaultdict(lambda: defaultdict(lambda: 0.0))  # The model
+
+    for context, context_count in tri_count_2.items():  # Build model using dictionaries of count from previous part
+        for c, _ in unigram.items():
+            full = (context[0], context[1], c)
+            total_count = tri_count_3[full] + 1
+            new_denominator = context_count + v
+            tri_laplace[c][context] = float(total_count / new_denominator)
+
+    for key, value in tri_laplace.items():
+        tri_laplace[key] = dict(value)
+
+    # print_nested_dict(tri_laplace)
+
     # pickle.dump(dict(tri_laplace), open(out_path + 'trigram_laplace.pkl', 'wb'))
 
     ########################
     # Linear Interpolation
     ########################
-    # lam = float(1/3)  # Lambda parameters are equally weighted
-    # unigram = pickle.load(open(out_path + 'unigram.pkl', 'rb'))
-    # bigram = pickle.load(open(out_path + 'bigram.pkl', 'rb'))
-    # trigram = pickle.load(open(out_path + 'trigram_no_smoothing.pkl', 'rb'))
-    # tri_lin_interpolation = defaultdict(lambda: defaultdict(lambda: 0.0))
-    #
-    # for context, context_count in tri_count_2.items():  # Build model using dictionaries of count from previous part
-    #     for c, _ in unigram.items():
-    #         if c == '<s>':
-    #             continue
-    #         prev_2 = context[0]
-    #         prev_1 = context[1]
-    #         score_tri = trigram[c][context] if context in trigram[c] else 0.0
-    #         score_bi = bigram[c][prev_1] if prev_1 in bigram[c] else 0.0
-    #         score_uni = unigram[c]
-    #         total_score = lam * score_tri + lam * score_bi + lam * score_uni
-    #         tri_lin_interpolation[c][context] = total_score
-    #
-    # for key, value in tri_lin_interpolation.items():
-    #     tri_lin_interpolation[key] = dict(value)
-    # tri_lin_interpolation = dict(tri_lin_interpolation)
-    # pickle.dump(tri_lin_interpolation, open(out_path + 'trigram_interpolation.pkl', 'wb'))
+    lam = float(1/3)  # Lambda parameters are equally weighted
+    unigram = pickle.load(open(out_path + 'unigram.pkl', 'rb'))
+    bigram = pickle.load(open(out_path + 'bigram.pkl', 'rb'))
+    trigram = pickle.load(open(out_path + 'trigram_no_smoothing.pkl', 'rb'))
+    bigram_inverted = pickle.load(open(out_path + 'bigram_inverted.pkl', 'rb'))
+    trigram_inverted = pickle.load(open(out_path + 'trigram_inverted.pkl', 'rb'))
+    tri_lin_interpolation = defaultdict(lambda: defaultdict(lambda: 0.0))
+
+    for context, context_dict in trigram_inverted.items():  # Build model using dictionaries of count from previous part
+        for c, _ in unigram.items():
+            # if c == '<s>':
+            #     continue
+            prev_2 = context[0]
+            prev_1 = context[1]
+            score_tri = trigram[c][context] if c in trigram_inverted[context] else 0.0
+            score_bi = bigram[c][prev_1] if c in bigram_inverted[prev_1] else 0.0
+            score_uni = unigram[c]
+            total_score = (score_tri + score_bi + score_uni) / 3
+            tri_lin_interpolation[c][context] = total_score
+
+    for key, value in tri_lin_interpolation.items():
+        tri_lin_interpolation[key] = dict(value)
+
+    tri_lin_interpolation = dict(tri_lin_interpolation)
+
+    # print_nested_dict(tri_lin_interpolation)
+
+    pickle.dump(tri_lin_interpolation, open(out_path + 'trigram_interpolation.pkl', 'wb'))
 
     ########################
     # Backoff
@@ -202,26 +214,29 @@ if __name__ == '__main__':
                 continue
             prev_2 = context[0]
             prev_1 = context[1]
-            score_tri = trigram[c][context] if context in trigram[c] else None
-            score_bi = bigram[c][prev_1] if prev_1 in bigram[c] else None
+            score_tri = trigram[c][context] if c in trigram and context in trigram[c] else None
+            score_bi = bigram[c][prev_1] if c in bigram and prev_1 in bigram[c] else None
             score_uni = unigram[c]
 
             final_score = 0.0
-            alpha = 0.7
+            alpha = 0.85
 
             if score_tri:
                 final_score = score_tri
             elif score_bi:
                 final_score = alpha * score_bi
             else:
-                final_score = alpha**2 * score_uni
+                final_score = alpha**10 * score_uni
 
             tri_backoff[c][context] = final_score
 
     for key, value in tri_backoff.items():
         tri_backoff[key] = dict(value)
     tri_backoff = dict(tri_backoff)
-    # pickle.dump(tri_backoff, open(out_path + 'trigram_backoff.pkl', 'wb'))
+
+    # print_nested_dict(tri_backoff)
+
+    pickle.dump(tri_backoff, open(out_path + 'trigram_backoff.pkl', 'wb'))
 
     ########################
     # Trigram (Katz Backoff)
@@ -304,4 +319,4 @@ if __name__ == '__main__':
         katz_tri[key] = dict(value)
     katz_tri = dict(katz_tri)
 
-    pickle.dump(katz_tri, open(out_path + 'trigram_katz_backoff.pkl', 'wb'))
+    # pickle.dump(katz_tri, open(out_path + 'trigram_katz_backoff.pkl', 'wb'))

@@ -14,13 +14,13 @@ if __name__ == '__main__':
     # CSV output for Google Sheets
     token = []
     prob_list = []
-    for c in trigram_katz:
+    for c in trigram_interpolation:
         t = 'th' + c
-        prob = trigram_katz[c][('t', 'h')] if ('t', 'h') in trigram_katz[c] else 0.0
+        prob = trigram_interpolation[c][('t', 'h')] if ('t', 'h') in trigram_interpolation[c] else 0.0
         token.append(t)
         prob_list.append(prob)
     rows = zip(token, prob_list)
-    with open('katz.csv', "w") as f:
+    with open('interpolation.csv', "w") as f:
         writer = csv.writer(f)
         for row in rows:
             writer.writerow(row)
