@@ -21,4 +21,4 @@ Thank Ravneet for some formula clarification
 
 #### Unsolved Issues
 For backoff and linear interpolation models, the sum of P(w|(x, y))
-may not sum to 1.
+may not sum exactly to 1.
